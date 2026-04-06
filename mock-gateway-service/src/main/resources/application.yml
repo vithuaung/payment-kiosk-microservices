@@ -1,0 +1,20 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: mock-gateway-service
+
+pmk:
+  mock:
+    failure-rate: ${PMK_MOCK_FAILURE_RATE:0.05}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.conversion.pmk: DEBUG
