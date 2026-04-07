@@ -4,15 +4,18 @@ import com.conversion.pmk.common.enums.SettlementStatus;
 import com.conversion.pmk.settlement.client.SapSettleClient.SapSettleRequest;
 import com.conversion.pmk.settlement.dto.request.SyncSettleRequest;
 import com.conversion.pmk.settlement.dto.response.SettlementResponse;
+import com.conversion.pmk.settlement.mapper.SettlementMapper;
 import com.conversion.pmk.settlement.repository.SettlementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
 
 // Entry point for the synchronous HTTP settlement path
 @Slf4j
@@ -24,22 +27,14 @@ public class SyncSettlementService {
     private final SettlementRepository settlementRepository;
 
     // synchronized prevents two threads from settling the same payment concurrently
+    @Transactional
     public synchronized SettlementResponse settle(SyncSettleRequest request) {
         log.debug("Sync settle request sessionRef={}", request.getSessionRef());
 
         // Guard: if another thread already pushed the session to DONE, return it
         Optional<SettlementResponse> earlyReturn = settlementRepository
                 .findBySessionRefAndSettleStatus(request.getSessionRef(), SettlementStatus.DONE)
-                .map(s -> SettlementResponse.builder()
-                        .settlementId(s.getSettlementId())
-                        .sessionRef(s.getSessionRef())
-                        .settleStatus(s.getSettleStatus().name())
-                        .extRef(s.getExtRef())
-                        .retryCount(s.getRetryCount())
-                        .settledAt(s.getSettledAt() != null ? s.getSettledAt().toString() : null)
-                        .failReason(s.getFailReason())
-                        .attempts(Collections.emptyList())
-                        .build());
+                .map(SettlementMapper::toResponse);
 
         if (earlyReturn.isPresent()) {
             log.debug("Sync settle short-circuit — already DONE sessionRef={}", request.getSessionRef());

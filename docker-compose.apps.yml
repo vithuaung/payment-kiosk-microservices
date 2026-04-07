@@ -19,12 +19,14 @@ services:
       PMK_PAYMENT_SERVICE_URL: http://payment-service:8082
       PMK_SETTLEMENT_SERVICE_URL: http://settlement-service:8083
       PMK_NOTIFICATION_SERVICE_URL: http://notification-service:8084
+      PMK_MOCK_GATEWAY_URL: http://mock-gateway-service:8090
       PMK_JWT_SECRET: "pmk-secret-key-must-be-at-least-32-chars-long"
     depends_on:
       - patient-service
       - payment-service
       - settlement-service
       - notification-service
+    restart: on-failure
     networks:
       - pmk-net
 
@@ -42,6 +44,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: "Pmk@Str0ng!"
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PMK_MOCK_GATEWAY_URL: http://mock-gateway-service:8090
+    restart: on-failure
     networks:
       - pmk-net
 
@@ -62,6 +65,7 @@ services:
       SPRING_DATA_REDIS_PASSWORD: pmk_redis_pass
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PMK_MOCK_GATEWAY_URL: http://mock-gateway-service:8090
+    restart: on-failure
     networks:
       - pmk-net
 
@@ -83,6 +87,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PMK_MOCK_GATEWAY_URL: http://mock-gateway-service:8090
       PMK_PAYMENT_SERVICE_URL: http://payment-service:8082
+    restart: on-failure
     networks:
       - pmk-net
 
@@ -99,6 +104,7 @@ services:
       SPRING_DATASOURCE_USERNAME: sa
       SPRING_DATASOURCE_PASSWORD: "Pmk@Str0ng!"
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    restart: on-failure
     networks:
       - pmk-net
 

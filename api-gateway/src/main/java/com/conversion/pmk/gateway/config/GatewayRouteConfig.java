@@ -3,6 +3,7 @@ package com.conversion.pmk.gateway.config;
 import com.conversion.pmk.gateway.filter.JwtAuthGatewayFilter;
 import com.conversion.pmk.gateway.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +16,21 @@ public class GatewayRouteConfig {
 
     private final JwtUtil jwtUtil;
 
+    @Value("${pmk.patient-service.url}")
+    private String patientServiceUrl;
+
+    @Value("${pmk.payment-service.url}")
+    private String paymentServiceUrl;
+
+    @Value("${pmk.settlement-service.url}")
+    private String settlementServiceUrl;
+
+    @Value("${pmk.notification-service.url}")
+    private String notificationServiceUrl;
+
+    @Value("${pmk.mock-gateway.url}")
+    private String mockGatewayUrl;
+
     @Bean
     public RouteLocator routes(RouteLocatorBuilder builder) {
         JwtAuthGatewayFilter jwtFilter = new JwtAuthGatewayFilter(jwtUtil);
@@ -25,50 +41,47 @@ public class GatewayRouteConfig {
                 .route("patient-patients", r -> r
                         .path("/api/patients/**")
                         .filters(f -> f.filter(jwtFilter))
-                        .uri("lb://patient-service"))
+                        .uri(patientServiceUrl))
 
                 .route("patient-visits", r -> r
                         .path("/api/visits/**")
                         .filters(f -> f.filter(jwtFilter))
-                        .uri("lb://patient-service"))
+                        .uri(patientServiceUrl))
 
                 .route("patient-checkins", r -> r
                         .path("/api/checkins/**")
                         .filters(f -> f.filter(jwtFilter))
-                        .uri("lb://patient-service"))
+                        .uri(patientServiceUrl))
 
                 // --- payment-service ---
                 .route("payment-bills", r -> r
                         .path("/api/bills/**")
                         .filters(f -> f.filter(jwtFilter))
-                        .uri("lb://payment-service"))
+                        .uri(paymentServiceUrl))
 
                 .route("payment-payments", r -> r
                         .path("/api/payments/**")
                         .filters(f -> f.filter(jwtFilter))
-                        .uri("lb://payment-service"))
+                        .uri(paymentServiceUrl))
 
                 // --- settlement-service ---
                 .route("settlement-settlements", r -> r
                         .path("/api/settlements/**")
                         .filters(f -> f.filter(jwtFilter))
-                        .uri("lb://settlement-service"))
+                        .uri(settlementServiceUrl))
 
                 // --- notification-service ---
                 .route("notification-notifications", r -> r
                         .path("/api/notifications/**")
                         .filters(f -> f.filter(jwtFilter))
-                        .uri("lb://notification-service"))
+                        .uri(notificationServiceUrl))
 
                 // --- mock-gateway-service (no auth) ---
                 .route("mock-gateway", r -> r
                         .path("/mock/**")
-                        .uri("lb://mock-gateway-service"))
+                        .uri(mockGatewayUrl))
 
-                // --- auth handled locally by AuthController (no upstream route needed) ---
-                .route("auth-local", r -> r
-                        .path("/api/auth/**")
-                        .uri("no://op"))
+                // /api/auth/** is handled locally by AuthController — no upstream route needed
 
                 .build();
     }

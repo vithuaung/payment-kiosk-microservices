@@ -19,7 +19,7 @@ services:
       - mssql_data:/var/opt/mssql
       - ./docker/mssql/init.sql:/init.sql
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "Pmk@Str0ng!", "-Q", "SELECT 1"]
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "Pmk@Str0ng!", "-Q", "SELECT 1", "-C"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -34,7 +34,7 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/bash -c "
-        /opt/mssql-tools/bin/sqlcmd -S mssql -U sa -P 'Pmk@Str0ng!' -i /init.sql
+        /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P 'Pmk@Str0ng!' -i /init.sql -C
       "
     volumes:
       - ./docker/mssql/init.sql:/init.sql
@@ -62,6 +62,11 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - pmk-net
 
@@ -69,7 +74,8 @@ services:
     image: confluentinc/cp-kafka:7.6.1
     container_name: pmk-kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -81,7 +87,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:29092"]
       interval: 15s
       timeout: 10s
       retries: 10

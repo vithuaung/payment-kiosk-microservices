@@ -37,6 +37,12 @@ public class Settlement {
     @Column(name = "session_ref", length = 40, nullable = false)
     private String sessionRef;
 
+    @Column(name = "person_ref", length = 30)
+    private String personRef;
+
+    @Column(name = "pay_method", length = 20)
+    private String payMethod;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "settle_status", length = 20, nullable = false)
     private SettlementStatus settleStatus;

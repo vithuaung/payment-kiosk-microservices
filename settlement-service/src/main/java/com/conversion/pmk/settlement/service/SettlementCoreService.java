@@ -5,12 +5,12 @@ import com.conversion.pmk.common.exception.PaymentException;
 import com.conversion.pmk.settlement.client.SapSettleClient;
 import com.conversion.pmk.settlement.client.SapSettleClient.SapSettleRequest;
 import com.conversion.pmk.settlement.client.SapSettleClient.SapSettleResponse;
-import com.conversion.pmk.settlement.dto.response.AttemptResponse;
 import com.conversion.pmk.settlement.dto.response.SettlementResponse;
 import com.conversion.pmk.settlement.entity.SettleAttempt;
 import com.conversion.pmk.settlement.entity.Settlement;
 import com.conversion.pmk.settlement.repository.SettleAttemptRepository;
 import com.conversion.pmk.settlement.repository.SettlementRepository;
+import com.conversion.pmk.settlement.mapper.SettlementMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 // Shared core logic used by both the sync HTTP path and the async Kafka path
 @Slf4j
@@ -52,7 +49,7 @@ public class SettlementCoreService {
             if (s.getSettleStatus() == SettlementStatus.DONE) {
                 // Already settled — return as-is (idempotent)
                 log.debug("Settlement already DONE for sessionRef={}", sessionRef);
-                return toResponse(s);
+                return SettlementMapper.toResponse(s);
             }
 
             if (s.getSettleStatus() == SettlementStatus.FAILED && s.getRetryCount() >= s.getMaxRetry()) {
@@ -68,6 +65,8 @@ public class SettlementCoreService {
         Settlement settlement = existing.orElseGet(() -> Settlement.builder()
                 .paymentId(paymentId)
                 .sessionRef(sessionRef)
+                .personRef(sapRequest.getPersonRef())
+                .payMethod(sapRequest.getPayMethod())
                 .maxRetry(configuredMaxRetry)
                 .retryCount(0)
                 .build());
@@ -125,32 +124,7 @@ public class SettlementCoreService {
         attemptRepository.save(attempt);
 
         // 6. Map and return
-        return toResponse(settlement);
-    }
-
-    // Maps a Settlement entity to the response DTO
-    private SettlementResponse toResponse(Settlement s) {
-        List<AttemptResponse> attemptResponses = (s.getAttempts() == null)
-                ? Collections.emptyList()
-                : s.getAttempts().stream()
-                        .map(a -> AttemptResponse.builder()
-                                .attemptId(a.getAttemptId())
-                                .attemptNo(a.getAttemptNo())
-                                .resultStatus(a.getResultStatus())
-                                .attemptedAt(a.getAttemptedAt() != null ? a.getAttemptedAt().toString() : null)
-                                .build())
-                        .collect(Collectors.toList());
-
-        return SettlementResponse.builder()
-                .settlementId(s.getSettlementId())
-                .sessionRef(s.getSessionRef())
-                .settleStatus(s.getSettleStatus() != null ? s.getSettleStatus().name() : null)
-                .extRef(s.getExtRef())
-                .retryCount(s.getRetryCount())
-                .settledAt(s.getSettledAt() != null ? s.getSettledAt().toString() : null)
-                .failReason(s.getFailReason())
-                .attempts(attemptResponses)
-                .build();
+        return SettlementMapper.toResponse(settlement);
     }
 
     // Serialises an object to JSON; returns raw message on error
