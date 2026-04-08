@@ -100,7 +100,7 @@ public class MockBankController {
 
     // Returns the settlement status of a transaction by reference
     @GetMapping("/transaction/{txnRef}")
-    public ApiResponse<TxnStatusResponse> getTransactionStatus(@PathVariable String txnRef) {
+    public ApiResponse<TxnStatusResponse> getTransactionStatus(@PathVariable("txnRef") String txnRef) {
         log.debug("Transaction status query for txnRef={}", txnRef);
 
         boolean known = txnRef.startsWith("NETS-") || txnRef.startsWith("CRD-");

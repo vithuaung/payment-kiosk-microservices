@@ -1,5 +1,6 @@
 package com.conversion.pmk.patient.client;
 
+import com.conversion.pmk.common.dto.ApiResponse;
 import com.conversion.pmk.common.exception.PmkException;
 import com.conversion.pmk.patient.dto.request.CheckinRequest;
 import com.conversion.pmk.patient.dto.response.CheckinResponse;
@@ -33,8 +34,11 @@ public class NgemrClient {
         try {
             String url = ngemrUrl + "/mock/ngemr/person";
             Map<String, String> body = Map.of("idRef", idRef);
-            ResponseEntity<PersonResponse> response = restTemplate.postForEntity(url, buildRequest(body), PersonResponse.class);
-            return response.getBody();
+            ResponseEntity<ApiResponse<PersonResponse>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, buildRequest(body),
+                    new ParameterizedTypeReference<ApiResponse<PersonResponse>>() {});
+            ApiResponse<PersonResponse> apiResp = response.getBody();
+            return apiResp != null ? apiResp.getData() : null;
         } catch (RestClientException ex) {
             log.error("NGEMR person lookup failed for idRef={}: {}", idRef, ex.getMessage());
             throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
@@ -46,13 +50,11 @@ public class NgemrClient {
         try {
             String url = ngemrUrl + "/mock/ngemr/visits";
             Map<String, String> body = Map.of("idRef", idRef);
-            ResponseEntity<List<VisitResponse>> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    buildRequest(body),
-                    new ParameterizedTypeReference<>() {}
-            );
-            return response.getBody();
+            ResponseEntity<ApiResponse<List<VisitResponse>>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, buildRequest(body),
+                    new ParameterizedTypeReference<ApiResponse<List<VisitResponse>>>() {});
+            ApiResponse<List<VisitResponse>> apiResp = response.getBody();
+            return apiResp != null ? apiResp.getData() : null;
         } catch (RestClientException ex) {
             log.error("NGEMR visit lookup failed for idRef={}: {}", idRef, ex.getMessage());
             throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
@@ -63,8 +65,11 @@ public class NgemrClient {
     public CheckinResponse checkinPerson(CheckinRequest req) {
         try {
             String url = ngemrUrl + "/mock/ngemr/checkin";
-            ResponseEntity<CheckinResponse> response = restTemplate.postForEntity(url, buildRequest(req), CheckinResponse.class);
-            return response.getBody();
+            ResponseEntity<ApiResponse<CheckinResponse>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, buildRequest(req),
+                    new ParameterizedTypeReference<ApiResponse<CheckinResponse>>() {});
+            ApiResponse<CheckinResponse> apiResp = response.getBody();
+            return apiResp != null ? apiResp.getData() : null;
         } catch (RestClientException ex) {
             log.error("NGEMR checkin failed for idRef={}: {}", req.getIdRef(), ex.getMessage());
             throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);

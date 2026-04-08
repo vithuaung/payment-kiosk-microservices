@@ -26,7 +26,7 @@ public class NotificationController {
     @Operation(summary = "Get all notifications for a payment")
     @GetMapping("/payment/{paymentId}")
     public ResponseEntity<ApiResponse<List<NotificationResponse>>> getByPaymentId(
-            @PathVariable UUID paymentId) {
+            @PathVariable("paymentId") UUID paymentId) {
         List<NotificationResponse> notifications = notificationService.getByPaymentId(paymentId);
         return ResponseEntity.ok(ApiResponse.ok(notifications));
     }

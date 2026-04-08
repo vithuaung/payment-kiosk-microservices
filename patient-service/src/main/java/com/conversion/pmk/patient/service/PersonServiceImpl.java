@@ -24,7 +24,7 @@ public class PersonServiceImpl implements PersonService {
     private final PersonMapper personMapper;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public PersonResponse findByIdRef(String idRef) {
         return personRepository.findByIdRef(idRef)
                 .map(personMapper::toResponse)

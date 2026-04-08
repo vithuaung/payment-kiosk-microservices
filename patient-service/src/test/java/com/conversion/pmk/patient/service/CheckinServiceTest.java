@@ -88,7 +88,7 @@ class CheckinServiceTest {
                 .build();
 
         CheckinResponse mappedResponse = CheckinResponse.builder()
-                .checkinId(savedCheckin.getCheckinId())
+                .checkinId(savedCheckin.getCheckinId().toString())
                 .checkinType("WALKIN")
                 .locationCode("CTR-01")
                 .build();

@@ -298,9 +298,7 @@ curl http://localhost:8080/api/settlements/SESSION-REF \
 ### Retry a failed settlement
 ```bash
 curl -X POST http://localhost:8080/api/settlements/SESSION-REF/retry \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"sessionRef":"SESSION-REF"}'
+  -H "Authorization: Bearer TOKEN"
 ```
 
 
@@ -380,8 +378,8 @@ Connect via any SQL client:
 
 Connect via sqlcmd inside the container:
 ```bash
-docker exec -it pmk-mssql /opt/mssql-tools/bin/sqlcmd \
-  -S localhost -U sa -P 'Pmk@Str0ng!'
+docker exec -it pmk-mssql /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P 'Pmk@Str0ng!' -C
 ```
 
 Run a query:

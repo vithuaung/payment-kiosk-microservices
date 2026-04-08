@@ -23,13 +23,13 @@ public class CardSessionController {
     private final CardSessionService cardSessionService;
 
     @PostMapping("/{sessionRef}/open")
-    public ApiResponse<CardSessionResponse> openSession(@PathVariable String sessionRef) {
+    public ApiResponse<CardSessionResponse> openSession(@PathVariable("sessionRef") String sessionRef) {
         return ApiResponse.ok(cardSessionService.openSession(sessionRef));
     }
 
     @PutMapping("/{sessionRef}/update")
     public ApiResponse<CardSessionResponse> updateSession(
-            @PathVariable String sessionRef,
+            @PathVariable("sessionRef") String sessionRef,
             @RequestBody @Valid CardSessionRequest request) {
         return ApiResponse.ok(cardSessionService.updateSession(request));
     }

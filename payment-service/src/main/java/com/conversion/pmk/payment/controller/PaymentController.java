@@ -31,18 +31,18 @@ public class PaymentController {
     }
 
     @GetMapping("/{sessionRef}")
-    public ApiResponse<PaymentResponse> getPayment(@PathVariable String sessionRef) {
+    public ApiResponse<PaymentResponse> getPayment(@PathVariable("sessionRef") String sessionRef) {
         return ApiResponse.ok(paymentService.getBySessionRef(sessionRef));
     }
 
     @PutMapping("/{sessionRef}/start")
-    public ApiResponse<PaymentResponse> startPayment(@PathVariable String sessionRef) {
+    public ApiResponse<PaymentResponse> startPayment(@PathVariable("sessionRef") String sessionRef) {
         return ApiResponse.ok(paymentService.startProcessing(sessionRef));
     }
 
     @PutMapping("/{sessionRef}/complete")
     public ApiResponse<PaymentResponse> completePayment(
-            @PathVariable String sessionRef,
+            @PathVariable("sessionRef") String sessionRef,
             @RequestBody @Valid CompletePaymentRequest request) {
         return ApiResponse.ok(paymentService.complete(request));
     }

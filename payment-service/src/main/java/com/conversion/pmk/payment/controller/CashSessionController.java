@@ -23,20 +23,20 @@ public class CashSessionController {
     private final CashSessionService cashSessionService;
 
     @PostMapping("/{sessionRef}/open")
-    public ApiResponse<CashSessionResponse> openSession(@PathVariable String sessionRef) {
+    public ApiResponse<CashSessionResponse> openSession(@PathVariable("sessionRef") String sessionRef) {
         return ApiResponse.ok(cashSessionService.openSession(sessionRef));
     }
 
     @PutMapping("/{sessionRef}/update")
     public ApiResponse<CashSessionResponse> updateSession(
-            @PathVariable String sessionRef,
+            @PathVariable("sessionRef") String sessionRef,
             @RequestBody @Valid CashSessionRequest request) {
         return ApiResponse.ok(cashSessionService.updateSession(request));
     }
 
     @PutMapping("/{sessionRef}/close")
     public ApiResponse<CashSessionResponse> closeSession(
-            @PathVariable String sessionRef,
+            @PathVariable("sessionRef") String sessionRef,
             @RequestBody @Valid CashSessionRequest request) {
         return ApiResponse.ok(cashSessionService.closeSession(
                 sessionRef,

@@ -39,7 +39,7 @@ public class SettlementController {
     @Operation(summary = "Get settlement by sessionRef")
     @GetMapping("/{sessionRef}")
     public ResponseEntity<ApiResponse<SettlementResponse>> getSettlement(
-            @PathVariable String sessionRef) {
+            @PathVariable("sessionRef") String sessionRef) {
 
         Settlement settlement = settlementRepository.findBySessionRef(sessionRef)
                 .orElseThrow(() -> new ResourceNotFoundException("Settlement", sessionRef));
@@ -52,7 +52,7 @@ public class SettlementController {
     @Operation(summary = "Retry a failed settlement")
     @PostMapping("/{sessionRef}/retry")
     public ResponseEntity<ApiResponse<SettlementResponse>> retrySettle(
-            @PathVariable String sessionRef) {
+            @PathVariable("sessionRef") String sessionRef) {
 
         Settlement existing = settlementRepository.findBySessionRef(sessionRef)
                 .orElseThrow(() -> new ResourceNotFoundException("Settlement", sessionRef));

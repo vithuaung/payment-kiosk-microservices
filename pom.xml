@@ -26,6 +26,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.boot.version>3.2.5</spring.boot.version>
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <spring.cloud.version>2023.0.1</spring.cloud.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <lombok.version>1.18.32</lombok.version>
@@ -69,10 +70,17 @@
                 <version>${mssql.version}</version>
             </dependency>
 
-            <!-- Flyway core — MSSQL support is built-in for 9.x -->
+            <!-- Flyway core -->
             <dependency>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-core</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+
+            <!-- Flyway SQL Server module — required separately in 9.x -->
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-sqlserver</artifactId>
                 <version>${flyway.version}</version>
             </dependency>
 
@@ -142,6 +150,9 @@
                     <configuration>
                         <source>21</source>
                         <target>21</target>
+                        <compilerArgs>
+                            <arg>-parameters</arg>
+                        </compilerArgs>
                         <!-- Lombok must come before MapStruct -->
                         <annotationProcessorPaths>
                             <path>

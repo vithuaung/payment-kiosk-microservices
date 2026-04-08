@@ -40,6 +40,12 @@
             <artifactId>flyway-core</artifactId>
         </dependency>
 
+        <!-- Flyway SQL Server module -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-sqlserver</artifactId>
+        </dependency>
+
         <!-- Kafka producer -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
