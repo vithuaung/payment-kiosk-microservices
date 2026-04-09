@@ -112,6 +112,7 @@ public class PaymentServiceImpl implements PaymentService {
         // 4. Publish Kafka event
         PaymentInitiatedEvent event = PaymentInitiatedEvent.builder()
                 .eventId(UUID.randomUUID().toString())
+                .paymentId(saved.getPaymentId().toString())
                 .sessionRef(saved.getSessionRef())
                 .personRef(saved.getPersonRef())
                 .terminalCode(saved.getTerminalCode())

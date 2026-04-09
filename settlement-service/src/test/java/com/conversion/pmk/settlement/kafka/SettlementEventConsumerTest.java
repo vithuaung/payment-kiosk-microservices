@@ -32,6 +32,7 @@ class SettlementEventConsumerTest {
     private PaymentInitiatedEvent buildEvent(String sessionRef) {
         return new PaymentInitiatedEvent(
                 UUID.randomUUID().toString(),
+                null,
                 sessionRef,
                 "P-300",
                 "TERM-01",

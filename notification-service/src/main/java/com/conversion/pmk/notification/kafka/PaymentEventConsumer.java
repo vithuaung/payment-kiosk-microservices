@@ -31,8 +31,9 @@ public class PaymentEventConsumer {
     public void onPaymentCompleted(PaymentCompletedEvent event) {
         log.info("Received payment.completed eventId={} sessionRef={}", event.getEventId(), event.getSessionRef());
 
-        // Derive a stable UUID from sessionRef so duplicate events are idempotent at the DB level
-        UUID paymentId = UUID.nameUUIDFromBytes(event.getSessionRef().getBytes());
+        UUID paymentId = (event.getPaymentId() != null && !event.getPaymentId().isBlank())
+                ? UUID.fromString(event.getPaymentId())
+                : UUID.nameUUIDFromBytes(event.getSessionRef().getBytes());
 
         String emailSubject = "Payment Confirmed";
         String emailBody = String.format(
@@ -61,7 +62,9 @@ public class PaymentEventConsumer {
     public void onPaymentFailed(PaymentFailedEvent event) {
         log.info("Received payment.failed eventId={} sessionRef={}", event.getEventId(), event.getSessionRef());
 
-        UUID paymentId = UUID.nameUUIDFromBytes(event.getSessionRef().getBytes());
+        UUID paymentId = (event.getPaymentId() != null && !event.getPaymentId().isBlank())
+                ? UUID.fromString(event.getPaymentId())
+                : UUID.nameUUIDFromBytes(event.getSessionRef().getBytes());
 
         String subject = "Payment Failed";
         String body = String.format(

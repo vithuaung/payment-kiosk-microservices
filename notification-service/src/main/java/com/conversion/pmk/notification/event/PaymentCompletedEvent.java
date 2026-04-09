@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 public class PaymentCompletedEvent {
 
     private String eventId;
+    private String paymentId;
     private String sessionRef;
     private String extRef;
     private long occurredAt;

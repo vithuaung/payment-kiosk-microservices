@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class PaymentFailedEvent {
 
     private String eventId;
+    private String paymentId;
     private String sessionRef;
     private String failReason;
     private int retryCount;

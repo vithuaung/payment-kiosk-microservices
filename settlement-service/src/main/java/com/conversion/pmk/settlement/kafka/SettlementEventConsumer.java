@@ -36,14 +36,17 @@ public class SettlementEventConsumer {
                     .items(Collections.emptyList())
                     .build();
 
-            // Derive a stable UUID from sessionRef so reprocessing is idempotent
-            UUID paymentId = UUID.nameUUIDFromBytes(event.getSessionRef().getBytes());
+            // Use real paymentId from event; fall back to derived UUID for backward-compat
+            UUID paymentId = (event.getPaymentId() != null && !event.getPaymentId().isBlank())
+                    ? UUID.fromString(event.getPaymentId())
+                    : UUID.nameUUIDFromBytes(event.getSessionRef().getBytes());
 
             SettlementResponse result = coreService.doSettle(event.getSessionRef(), paymentId, sapRequest);
 
             if ("DONE".equals(result.getSettleStatus())) {
                 producer.publishPaymentCompleted(PaymentCompletedEvent.builder()
                         .eventId(UUID.randomUUID().toString())
+                        .paymentId(event.getPaymentId())
                         .sessionRef(result.getSessionRef())
                         .extRef(result.getExtRef())
                         .occurredAt(System.currentTimeMillis())
@@ -51,6 +54,7 @@ public class SettlementEventConsumer {
             } else if ("FAILED".equals(result.getSettleStatus())) {
                 producer.publishPaymentFailed(PaymentFailedEvent.builder()
                         .eventId(UUID.randomUUID().toString())
+                        .paymentId(event.getPaymentId())
                         .sessionRef(result.getSessionRef())
                         .failReason(result.getFailReason())
                         .retryCount(result.getRetryCount())
@@ -62,6 +66,7 @@ public class SettlementEventConsumer {
             log.error("Settlement processing error sessionRef={} reason={}", event.getSessionRef(), ex.getMessage(), ex);
             producer.publishPaymentFailed(PaymentFailedEvent.builder()
                     .eventId(UUID.randomUUID().toString())
+                    .paymentId(event.getPaymentId())
                     .sessionRef(event.getSessionRef())
                     .failReason(ex.getMessage())
                     .retryCount(0)

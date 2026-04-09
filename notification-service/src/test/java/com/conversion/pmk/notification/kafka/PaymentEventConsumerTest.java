@@ -38,7 +38,7 @@ class PaymentEventConsumerTest {
         when(notificationService.sendSms(any(), any(), any())).thenReturn(stubResponse());
 
         PaymentCompletedEvent event = new PaymentCompletedEvent(
-                UUID.randomUUID().toString(), "SESSION-001", "EXT-REF-001", System.currentTimeMillis()
+                UUID.randomUUID().toString(), null, "SESSION-001", "EXT-REF-001", System.currentTimeMillis()
         );
 
         paymentEventConsumer.onPaymentCompleted(event);
@@ -52,7 +52,7 @@ class PaymentEventConsumerTest {
         when(notificationService.sendEmail(any(), any(), any(), any())).thenReturn(stubResponse());
 
         PaymentFailedEvent event = new PaymentFailedEvent(
-                UUID.randomUUID().toString(), "SESSION-002", "Timeout", 3, System.currentTimeMillis()
+                UUID.randomUUID().toString(), null, "SESSION-002", "Timeout", 3, System.currentTimeMillis()
         );
 
         paymentEventConsumer.onPaymentFailed(event);

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 public class PaymentInitiatedEvent {
 
     private String eventId;
+    private String paymentId;
     private String sessionRef;
     private String personRef;
     private String terminalCode;
