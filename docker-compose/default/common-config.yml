@@ -1,0 +1,27 @@
+services:
+
+  # Base: network only
+  network-deploy-service:
+    networks:
+      - pmk-net
+
+  # Base: network + memory limit
+  microservice-base-config:
+    extends:
+      service: network-deploy-service
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+
+  # Base: network + memory + OpenTelemetry agent
+  microservice-otel-config:
+    extends:
+      service: microservice-base-config
+    environment:
+      JAVA_TOOL_OPTIONS: "-javaagent:/app/libs/opentelemetry-javaagent.jar"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT: 60000
+

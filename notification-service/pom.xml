@@ -15,6 +15,18 @@
     <description>Kafka consumer that sends email and SMS notifications and persists every attempt</description>
 
     <dependencies>
+        <!-- Actuator (health, metrics, prometheus) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Prometheus metrics registry -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Web MVC -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,0 +1,35 @@
+// Discover all Docker containers on the host
+discovery.docker "pmk_containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Relabel: extract container name and compose service label
+discovery.relabel "pmk_containers" {
+  targets = discovery.docker.pmk_containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+// Collect logs from discovered containers
+loki.source.docker "pmk_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.pmk_containers.output
+  forward_to = [loki.write.pmk_loki.receiver]
+  relabel_rules = discovery.relabel.pmk_containers.rules
+}
+
+// Ship logs to Loki
+loki.write "pmk_loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

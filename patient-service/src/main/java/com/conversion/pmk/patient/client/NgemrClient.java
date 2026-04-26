@@ -6,80 +6,59 @@ import com.conversion.pmk.patient.dto.request.CheckinRequest;
 import com.conversion.pmk.patient.dto.response.CheckinResponse;
 import com.conversion.pmk.patient.dto.response.PersonResponse;
 import com.conversion.pmk.patient.dto.response.VisitResponse;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
 
-// HTTP client for the NGEMR mock gateway
+// Thin wrapper around NgemrFeignClient — handles ApiResponse unwrapping,
+// circuit breaking, and retry with fallback on failure.
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class NgemrClient {
 
-    private final RestTemplate restTemplate;
+    private final NgemrFeignClient feignClient;
 
-    @Value("${pmk.mock.ngemr-url}")
-    private String ngemrUrl;
-
-    // Look up a patient record from NGEMR by identity reference
+    @CircuitBreaker(name = "ngemr", fallbackMethod = "lookupPersonFallback")
+    @Retry(name = "ngemr")
     public PersonResponse lookupPerson(String idRef) {
-        try {
-            String url = ngemrUrl + "/mock/ngemr/person";
-            Map<String, String> body = Map.of("idRef", idRef);
-            ResponseEntity<ApiResponse<PersonResponse>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, buildRequest(body),
-                    new ParameterizedTypeReference<ApiResponse<PersonResponse>>() {});
-            ApiResponse<PersonResponse> apiResp = response.getBody();
-            return apiResp != null ? apiResp.getData() : null;
-        } catch (RestClientException ex) {
-            log.error("NGEMR person lookup failed for idRef={}: {}", idRef, ex.getMessage());
-            throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
-        }
+        ApiResponse<PersonResponse> resp = feignClient.lookupPerson(Map.of("idRef", idRef));
+        return resp != null ? resp.getData() : null;
     }
 
-    // Retrieve visit list for a patient from NGEMR
+    @CircuitBreaker(name = "ngemr", fallbackMethod = "lookupVisitsFallback")
+    @Retry(name = "ngemr")
     public List<VisitResponse> lookupVisits(String idRef) {
-        try {
-            String url = ngemrUrl + "/mock/ngemr/visits";
-            Map<String, String> body = Map.of("idRef", idRef);
-            ResponseEntity<ApiResponse<List<VisitResponse>>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, buildRequest(body),
-                    new ParameterizedTypeReference<ApiResponse<List<VisitResponse>>>() {});
-            ApiResponse<List<VisitResponse>> apiResp = response.getBody();
-            return apiResp != null ? apiResp.getData() : null;
-        } catch (RestClientException ex) {
-            log.error("NGEMR visit lookup failed for idRef={}: {}", idRef, ex.getMessage());
-            throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
-        }
+        ApiResponse<List<VisitResponse>> resp = feignClient.lookupVisits(Map.of("idRef", idRef));
+        return resp != null ? resp.getData() : null;
     }
 
-    // Submit a check-in to NGEMR and receive the confirmed response
+    @CircuitBreaker(name = "ngemr", fallbackMethod = "checkinPersonFallback")
+    @Retry(name = "ngemr")
     public CheckinResponse checkinPerson(CheckinRequest req) {
-        try {
-            String url = ngemrUrl + "/mock/ngemr/checkin";
-            ResponseEntity<ApiResponse<CheckinResponse>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, buildRequest(req),
-                    new ParameterizedTypeReference<ApiResponse<CheckinResponse>>() {});
-            ApiResponse<CheckinResponse> apiResp = response.getBody();
-            return apiResp != null ? apiResp.getData() : null;
-        } catch (RestClientException ex) {
-            log.error("NGEMR checkin failed for idRef={}: {}", req.getIdRef(), ex.getMessage());
-            throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
-        }
+        ApiResponse<CheckinResponse> resp = feignClient.checkinPerson(req);
+        return resp != null ? resp.getData() : null;
     }
 
-    // Build a JSON HTTP entity with the given body
-    private <T> HttpEntity<T> buildRequest(T body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return new HttpEntity<>(body, headers);
+    // ─── Fallbacks (circuit open or all retries exhausted) ────────────────────
+
+    PersonResponse lookupPersonFallback(String idRef, Exception ex) {
+        log.error("NGEMR person lookup unavailable for idRef={}: {}", idRef, ex.getMessage());
+        throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
+    }
+
+    List<VisitResponse> lookupVisitsFallback(String idRef, Exception ex) {
+        log.error("NGEMR visit lookup unavailable for idRef={}: {}", idRef, ex.getMessage());
+        throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
+    }
+
+    CheckinResponse checkinPersonFallback(CheckinRequest req, Exception ex) {
+        log.error("NGEMR checkin unavailable for idRef={}: {}", req.getIdRef(), ex.getMessage());
+        throw new PmkException("EMR service unavailable", "NGEMR_UNAVAILABLE", ex);
     }
 }

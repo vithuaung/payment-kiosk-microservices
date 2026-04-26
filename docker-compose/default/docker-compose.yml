@@ -1,0 +1,198 @@
+version: '3.9'
+
+# Infrastructure services: DB, cache, messaging, observability, mock.
+# Start this before apps:
+#   docker compose -f docker-compose/default/docker-compose.yml up -d
+
+services:
+
+  # ─── Database ─────────────────────────────────────────────────────────────
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: pmk-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Pmk@Str0ng!"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - ../mssql/init.sql:/init.sql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "Pmk@Str0ng!", "-Q", "SELECT 1", "-C"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: pmk-mssql-init
+    depends_on:
+      mssql:
+        condition: service_healthy
+    entrypoint: >
+      /bin/bash -c "
+        /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P 'Pmk@Str0ng!' -i /init.sql -C
+      "
+    volumes:
+      - ../mssql/init.sql:/init.sql
+    restart: "no"
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # ─── Cache ────────────────────────────────────────────────────────────────
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: pmk-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass pmk_redis_pass
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "pmk_redis_pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # ─── Messaging (Kafka KRaft — no Zookeeper) ───────────────────────────────
+
+  kafka:
+    image: apache/kafka:4.1.1
+    hostname: kafka
+    container_name: pmk-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://kafka:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z kafka 9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # ─── Mock External Gateway ────────────────────────────────────────────────
+
+  mock-gateway-service:
+    build:
+      context: ../../mock-gateway-service
+      dockerfile: Dockerfile
+    container_name: pmk-mock-gateway
+    ports:
+      - "8090:8090"
+    environment:
+      SERVER_PORT: 8090
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # ─── Observability: Metrics ───────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    container_name: pmk-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # ─── Observability: Logs ──────────────────────────────────────────────────
+
+  loki:
+    image: grafana/loki:3.6.2
+    container_name: pmk-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  alloy:
+    image: grafana/alloy:v1.12.0
+    container_name: pmk-alloy
+    volumes:
+      - ../observability/alloy/alloy-local-config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+    depends_on:
+      - loki
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # ─── Observability: Traces ────────────────────────────────────────────────
+
+  tempo:
+    image: grafana/tempo:2.9.0
+    container_name: pmk-tempo
+    command: -config.file=/etc/tempo-config.yml
+    ports:
+      - "3200:3200"
+      - "4318:4318"
+    volumes:
+      - ../observability/tempo/tempo.yml:/etc/tempo-config.yml
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  # ─── Observability: Dashboard ─────────────────────────────────────────────
+
+  grafana:
+    image: grafana/grafana:12.3.0
+    container_name: pmk-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    depends_on:
+      - loki
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+volumes:
+  mssql_data:
+
+networks:
+  pmk-net:
+    driver: bridge
+    name: pmk-net

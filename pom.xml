@@ -34,6 +34,7 @@
         <mssql.version>12.6.1.jre11</mssql.version>
         <flyway.version>9.22.3</flyway.version>
         <jjwt.version>0.12.5</jjwt.version>
+        <otel.version>2.22.0</otel.version>
     </properties>
 
     <dependencyManagement>
@@ -104,6 +105,28 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
+            </dependency>
+
+            <!-- Actuator -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-actuator</artifactId>
+                <version>${spring.boot.version}</version>
+            </dependency>
+
+            <!-- Micrometer Prometheus registry -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>1.12.5</version>
+            </dependency>
+
+            <!-- OpenTelemetry Java agent (runtime — used as -javaagent in Docker) -->
+            <dependency>
+                <groupId>io.opentelemetry.javaagent</groupId>
+                <artifactId>opentelemetry-javaagent</artifactId>
+                <version>${otel.version}</version>
+                <scope>runtime</scope>
             </dependency>
 
             <!-- JWT -->

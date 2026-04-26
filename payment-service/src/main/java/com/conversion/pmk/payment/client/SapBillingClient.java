@@ -5,79 +5,64 @@ import com.conversion.pmk.common.exception.PmkException;
 import com.conversion.pmk.payment.dto.request.BillItemRequest;
 import com.conversion.pmk.payment.dto.request.BillLookupRequest;
 import com.conversion.pmk.payment.dto.response.BillDetailResponse;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
 
-// HTTP client for the mock SAP billing gateway
+// Thin wrapper around SapBillingFeignClient — handles ApiResponse unwrapping,
+// circuit breaking, and retry with fallback on failure.
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SapBillingClient {
 
-    private final RestTemplate restTemplate;
+    private final SapBillingFeignClient feignClient;
 
-    @Value("${pmk.mock.sap-url}")
-    private String sapUrl;
-
-    // Fetch outstanding bill details for a patient
+    @CircuitBreaker(name = "sap-billing", fallbackMethod = "lookupBillsFallback")
+    @Retry(name = "sap-billing")
     public BillDetailResponse lookupBills(String personRef, String orgCode) {
-        String url = sapUrl + "/mock/sap/bill-details";
         BillLookupRequest body = BillLookupRequest.builder()
                 .personRef(personRef)
                 .orgCode(orgCode)
                 .build();
-        try {
-            ResponseEntity<ApiResponse<BillDetailResponse>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, buildRequest(body),
-                    new ParameterizedTypeReference<ApiResponse<BillDetailResponse>>() {});
-            ApiResponse<BillDetailResponse> apiResp = response.getBody();
-            return apiResp != null ? apiResp.getData() : null;
-        } catch (RestClientException ex) {
-            log.error("SAP bill lookup failed for personRef={}: {}", personRef, ex.getMessage());
-            throw new PmkException("Billing service unavailable", "SAP_UNAVAILABLE", ex);
-        }
+        ApiResponse<BillDetailResponse> resp = feignClient.lookupBills(body);
+        return resp != null ? resp.getData() : null;
     }
 
-    // Post paid bill items back to SAP after payment completes
+    @CircuitBreaker(name = "sap-billing", fallbackMethod = "postBillsFallback")
+    @Retry(name = "sap-billing")
     public BillPostResponse postBills(String sessionRef, String personRef,
                                       List<BillItemRequest> items, String payMethod) {
-        String url = sapUrl + "/mock/sap/bill-post";
         Map<String, Object> body = Map.of(
                 "sessionRef", sessionRef,
                 "personRef", personRef,
                 "items", items,
                 "payMethod", payMethod
         );
-        try {
-            ResponseEntity<ApiResponse<BillPostResponse>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, buildRequest(body),
-                    new ParameterizedTypeReference<ApiResponse<BillPostResponse>>() {});
-            ApiResponse<BillPostResponse> apiResp = response.getBody();
-            return apiResp != null ? apiResp.getData() : null;
-        } catch (RestClientException ex) {
-            log.error("SAP bill post failed for sessionRef={}: {}", sessionRef, ex.getMessage());
-            throw new PmkException("Billing service unavailable", "SAP_UNAVAILABLE", ex);
-        }
+        ApiResponse<BillPostResponse> resp = feignClient.postBills(body);
+        return resp != null ? resp.getData() : null;
     }
 
-    // Build a JSON HTTP entity with the given body
-    private <T> HttpEntity<T> buildRequest(T body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return new HttpEntity<>(body, headers);
+    // ─── Fallbacks ────────────────────────────────────────────────────────────
+
+    BillDetailResponse lookupBillsFallback(String personRef, String orgCode, Exception ex) {
+        log.error("SAP bill lookup unavailable for personRef={}: {}", personRef, ex.getMessage());
+        throw new PmkException("Billing service unavailable", "SAP_UNAVAILABLE", ex);
+    }
+
+    BillPostResponse postBillsFallback(String sessionRef, String personRef,
+                                       List<BillItemRequest> items, String payMethod, Exception ex) {
+        log.error("SAP bill post unavailable for sessionRef={}: {}", sessionRef, ex.getMessage());
+        throw new PmkException("Billing service unavailable", "SAP_UNAVAILABLE", ex);
     }
 
     // Response shape returned by mock SAP bill-post endpoint

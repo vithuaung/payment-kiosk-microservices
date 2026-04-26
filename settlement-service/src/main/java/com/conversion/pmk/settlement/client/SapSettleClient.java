@@ -2,56 +2,45 @@ package com.conversion.pmk.settlement.client;
 
 import com.conversion.pmk.common.dto.ApiResponse;
 import com.conversion.pmk.common.exception.PmkException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-// Sends settlement requests to the mock SAP bill-post endpoint
+// Thin wrapper around SapSettleFeignClient — handles ApiResponse unwrapping,
+// circuit breaking, and retry with fallback on failure.
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SapSettleClient {
 
-    private final RestTemplate restTemplate;
+    private final SapSettleFeignClient feignClient;
 
-    @Value("${pmk.mock.sap-url}")
-    private String sapUrl;
-
+    @CircuitBreaker(name = "sap-settle", fallbackMethod = "settleFallback")
+    @Retry(name = "sap-settle")
     public SapSettleResponse settle(SapSettleRequest request) {
-        String url = sapUrl + "/mock/sap/bill-post";
-        log.debug("Posting to SAP: {} sessionRef={}", url, request.getSessionRef());
-        try {
-            ResponseEntity<ApiResponse<SapSettleResponse>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, buildRequest(request),
-                    new ParameterizedTypeReference<ApiResponse<SapSettleResponse>>() {});
-            ApiResponse<SapSettleResponse> apiResp = response.getBody();
-            return apiResp != null ? apiResp.getData() : null;
-        } catch (RestClientException ex) {
-            log.error("SAP settle call failed: {}", ex.getMessage());
-            throw new PmkException("SAP settle unavailable", "SAP_SETTLE_UNAVAILABLE", ex);
-        }
+        log.debug("Posting to SAP settle: sessionRef={}", request.getSessionRef());
+        ApiResponse<SapSettleResponse> resp = feignClient.settle(request);
+        return resp != null ? resp.getData() : null;
     }
 
-    // Build a JSON HTTP entity with the given body
-    private <T> HttpEntity<T> buildRequest(T body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return new HttpEntity<>(body, headers);
+    // ─── Fallback ─────────────────────────────────────────────────────────────
+
+    SapSettleResponse settleFallback(SapSettleRequest request, Exception ex) {
+        log.error("SAP settle unavailable for sessionRef={}: {}", request.getSessionRef(), ex.getMessage());
+        throw new PmkException("SAP settle unavailable", "SAP_SETTLE_UNAVAILABLE", ex);
     }
 
-    // Payload sent to mock SAP
+    // ─── Request / Response DTOs ──────────────────────────────────────────────
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -74,7 +63,6 @@ public class SapSettleClient {
         }
     }
 
-    // Response from mock SAP
     @Data
     @Builder
     @NoArgsConstructor

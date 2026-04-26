@@ -2,8 +2,10 @@ package com.conversion.pmk.settlement;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
+@EnableFeignClients
 public class SettlementApplication {
 
     public static void main(String[] args) {
