@@ -2,11 +2,11 @@ package com.conversion.pmk.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
-// WebFlux security — all real auth is delegated to JwtAuthGatewayFilter
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
@@ -15,10 +15,15 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
-                .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-                // JWT filter on each route is the enforcement boundary; permit all here
-                .authorizeExchange(ex -> ex.anyExchange().permitAll())
+                .authorizeExchange(ex -> ex
+                        .pathMatchers(
+                                "/actuator/**",
+                                "/api-docs/**",
+                                "/swagger-ui/**",
+                                "/mock/**")
+                        .permitAll()
+                        .anyExchange().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();
     }
 }

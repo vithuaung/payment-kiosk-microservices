@@ -1,0 +1,31 @@
+{
+  "realm": "pmk",
+  "displayName": "PMK",
+  "enabled": true,
+  "accessTokenLifespan": 3600,
+  "ssoSessionIdleTimeout": 1800,
+  "clients": [
+    {
+      "clientId": "pmk-kiosk",
+      "name": "PMK Kiosk Terminal",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "pmk-kiosk-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "TERMINAL",
+        "description": "Kiosk terminal role"
+      }
+    ]
+  }
+}

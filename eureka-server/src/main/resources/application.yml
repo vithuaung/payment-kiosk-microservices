@@ -1,0 +1,14 @@
+server:
+  port: 8070
+
+spring:
+  application:
+    name: eureka-server
+  config:
+    import: optional:configserver:${SPRING_CONFIG_IMPORT_URL:http://localhost:8888/}
+
+logging:
+  level:
+    com.conversion.pmk: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"

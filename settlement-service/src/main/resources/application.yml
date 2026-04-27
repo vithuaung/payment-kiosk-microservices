@@ -4,10 +4,8 @@ server:
 spring:
   application:
     name: settlement-service
-  cloud:
-    openfeign:
-      circuitbreaker:
-        enabled: true
+  config:
+    import: optional:configserver:${SPRING_CONFIG_IMPORT_URL:http://localhost:8888/}
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:sqlserver://localhost:1433;databaseName=pmk_settlement;encrypt=false;trustServerCertificate=true}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
@@ -36,63 +34,15 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
-    consumer:
-      group-id: settlement-service-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "com.conversion.pmk.*"
-        spring.json.value.default.type: com.conversion.pmk.settlement.event.PaymentInitiatedEvent
 
-pmk:
-  mock:
-    sap-url: ${PMK_MOCK_GATEWAY_URL:http://localhost:8090}
-  settlement:
-    max-retry: 5
-
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "health,info,prometheus,metrics"
-  health:
-    readiness-state:
-      enabled: true
-    liveness-state:
-      enabled: true
-  endpoint:
-    health:
-      probes:
-        enabled: true
-  info:
-    env:
-      enabled: true
-  metrics:
-    tags:
-      application: ${spring.application.name}
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      sap-settle:
-        slidingWindowSize: 10
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10s
-        permittedNumberOfCallsInHalfOpenState: 3
-  retry:
-    instances:
-      sap-settle:
-        maxAttempts: 3
-        waitDuration: 500ms
-        enableExponentialBackoff: true
-        exponentialBackoffMultiplier: 2
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8070/eureka/}
 
 logging:
   level:

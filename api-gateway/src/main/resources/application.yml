@@ -4,50 +4,22 @@ server:
 spring:
   application:
     name: api-gateway
-  cloud:
-    gateway:
-      discovery:
-        locator:
-          enabled: false
+  config:
+    import: optional:configserver:${SPRING_CONFIG_IMPORT_URL:http://localhost:8888/}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:9080/realms/pmk/protocol/openid-connect/certs}
 
-pmk:
-  jwt:
-    secret: ${PMK_JWT_SECRET:pmk-secret-key-must-be-at-least-32-chars-long}
-    expiry-ms: 3600000
-  auth:
-    api-key: ${PMK_AUTH_API_KEY:pmk-dev-api-key}
-
-  patient-service:
-    url: ${PMK_PATIENT_SERVICE_URL:http://localhost:8081}
-  payment-service:
-    url: ${PMK_PAYMENT_SERVICE_URL:http://localhost:8082}
-  settlement-service:
-    url: ${PMK_SETTLEMENT_SERVICE_URL:http://localhost:8083}
-  notification-service:
-    url: ${PMK_NOTIFICATION_SERVICE_URL:http://localhost:8084}
-  mock-gateway:
-    url: ${PMK_MOCK_GATEWAY_URL:http://localhost:8090}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "health,info,prometheus,metrics"
-  health:
-    readiness-state:
-      enabled: true
-    liveness-state:
-      enabled: true
-  endpoint:
-    health:
-      probes:
-        enabled: true
-  info:
-    env:
-      enabled: true
-  metrics:
-    tags:
-      application: ${spring.application.name}
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8070/eureka/}
 
 logging:
   level:
